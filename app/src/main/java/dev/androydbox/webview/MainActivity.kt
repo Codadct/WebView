@@ -39,13 +39,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.androydbox.webview.ui.theme.WebViewTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.w3c.dom.Text
 import java.util.function.IntConsumer
+import kotlin.concurrent.thread
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             WebViewTheme {
                 // A surface container using the 'background' color from the theme
@@ -82,7 +89,12 @@ class MainActivity : ComponentActivity() {
                                 )
                                 Button(onClick = {
                                     QuerryList+=text
-                                    text=""
+                                    GlobalScope.launch ( Dispatchers.Main ){
+                                        QuerryList+= generateText(text)
+                                        text=""
+                                    }
+                                    //QuerryList+=generateText(text)
+
                                     Log.d("MainActivity ",  "ButtonClicked")
 
                                 }) {
@@ -120,6 +132,34 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         modifier = modifier
     )
    // WebViewComposable(url = "https://en.m.wikipedia.org/wiki/Sonamarg", context = LocalContext.current)
+}
+
+suspend fun generateText(prompt:String):String{
+    val apiKey = "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"
+    //val prompt = "Translate the following English text to French: 'Hello, world!'"
+
+    val openAIApiClient = OpenAIApiClient(apiKey)
+    var generatedText=""
+    GlobalScope.launch(Dispatchers.IO) {
+        val job1=launch {
+            try {
+                Log.e("Main", "$prompt")
+                generatedText = openAIApiClient.generateText(prompt)
+                withContext(Dispatchers.Main) {
+                    // Handle the generated text on the main thread
+                    Log.e("Generated Text:", generatedText)
+
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+        }
+        job1.join()
+    }
+    //delay(4000L)
+
+    return generatedText.toString()
 }
 
 @Preview(showBackground = true)
